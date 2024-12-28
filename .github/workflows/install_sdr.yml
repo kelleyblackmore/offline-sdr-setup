@@ -1,0 +1,66 @@
+name: Build Offline SDR Setup
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-offline-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Prepare environment
+        run: |
+          sudo apt-get update
+          # dpkg-dev is useful for some advanced packaging commands
+          sudo apt-get install -y dpkg-dev python3-pip
+
+      - name: Create folder structure
+        run: |
+          mkdir -p OfflineSDRSetup/packages/wheels
+          mkdir -p OfflineSDRSetup/scripts
+
+      - name: Download .deb packages
+        run: |
+          # Move into the packages folder
+          cd OfflineSDRSetup/packages
+
+          # Download required .deb packages (example set; adjust as needed)
+          sudo apt-get update
+          apt-get download rtl-sdr
+          apt-get download python3
+          apt-get download python3-pip
+          apt-get download python3-numpy
+          apt-get download python3-pyaudio
+          apt-get download sox
+          apt-get download libusb-1.0-0
+          apt-get download libusb-1.0-0-dev
+
+          # Move back
+          cd ../../
+
+      - name: Download Python wheels
+        run: |
+          # Example: we want "pyrtlsdr" in wheels. We'll also include "numpy" and "pyaudio" for good measure
+          pip download --dest OfflineSDRSetup/packages/wheels pyrtlsdr pyaudio numpy
+
+      - name: Copy scripts
+        run: |
+          # Copy your existing local scripts from repo into the OfflineSDRSetup/scripts folder
+          cp scripts/*.sh OfflineSDRSetup/scripts/
+          cp scripts/*.py OfflineSDRSetup/scripts/
+
+      - name: Zip all artifacts
+        run: |
+          # Everything in OfflineSDRSetup/ will go into the zip
+          zip -r offline-sdr-setup.zip OfflineSDRSetup
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: offline-sdr-setup
+          path: offline-sdr-setup.zip
